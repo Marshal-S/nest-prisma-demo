@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["interactiveTransactions"] //4.7版本之前用不了交互事务，要加上，4.7开始就支持了，不需要加
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator nestjsDto {
+  provider                      = "prisma-generator-nestjs-dto"
+  prettier                      = "true"
+  exportRelationModifierClasses = "false"  //是否包含relation关联,会额外生成带关联的dto(不建议直接用，但是粘贴很方便)
+  output                        = "../src/generated-nest-dto" //输出路径
+}

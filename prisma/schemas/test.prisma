@@ -1,0 +1,153 @@
+model User {
+  //default(autoincrement()) @default(cuid()) //@default(uuid())，可以根据情况使用，一般为了效率使用自增，分布式可以考虑后面两种
+  id           Int      @id @default(autoincrement()) //Int 4字节，长度有限，10亿多点，实际不需要考虑那么多，当有稍微接近个数字的体系时，性能也需要优化了，需要分表分库了
+  name         String
+  age          Int
+  created_time DateTime @default(now())
+  updated_time DateTime @updatedAt
+
+  sercet UserSercet?
+
+  //user-article多对多-user表
+  collection UserCollectionArticle[]
+
+  //和file一对多
+  head_id Int?
+  head    File? @relation(fields: [head_id], references: [id])
+}
+
+//用户隐私表
+model UserSercet {
+  id      Int       @id @default(autoincrement())
+  user    User      @relation(fields: [user_id], references: [id])
+  user_id Int       @unique
+
+  password String?
+  birth    String?
+}
+
+model Article {
+  id           String   @id @default(cuid())
+  name         String
+  created_time DateTime @default(now())
+  updated_time DateTime @updatedAt
+
+  //user-article多对多-article表
+  collection UserCollectionArticle[]
+}
+
+//user-article多对多-收藏关系表-显式多对多
+model UserCollectionArticle {
+  user       User    @relation(fields: [user_id], references: [id])
+  user_id    Int
+  article    Article @relation(fields: [article_id], references: [id])
+  article_id String
+
+  created_time DateTime @default(now())
+
+  @@id([user_id, article_id]) //复合主键
+}
+
+model File {
+  id           Int      @id @default(autoincrement())
+  originname   String
+  filename     String
+  //bigint大数字查询会序列化失败，必要建议字符串，或者使用Int长度不一定够，当然可以换算单位
+  size         Int
+  //金额类等需要精密或者关键数字可以用 Decimal，代码引入 decimal.js ，计算或者保存数字，这个占用位数略多，需要注意使用位置
+  // size         Decimal
+  created_time DateTime @default(now())
+
+  //和user多对一
+  heads      User[]
+  shop_cover ShopCoverFile[]
+  shop_video ShopVideoFile[]
+}
+
+//一对一 + 多对多
+model Shop {
+  id    Int            @id @default(autoincrement())
+  name  String
+  cover ShopCoverFile?
+  video ShopVideoFile?
+
+  created_time DateTime @default(now())
+  updated_time DateTime @updatedAt
+}
+
+//shop-user-cover关联，作为cover的关联表，与shop一对多，与File多对一(假设文件可以重复使用关联)
+model ShopCoverFile {
+  shop    Shop @relation(fields: [shop_id], references: [id])
+  shop_id Int  @unique
+  file    File @relation(fields: [file_id], references: [id])
+  file_id Int
+
+  created_time DateTime @default(now())
+
+  @@id([shop_id, file_id])
+}
+
+//shop-user-video关联，作为video的关联表，与shop一对多，与File多对一(假设文件可以重复使用关联)
+model ShopVideoFile {
+  shop    Shop @relation(fields: [shop_id], references: [id])
+  shop_id Int  @unique
+  file    File @relation(fields: [file_id], references: [id])
+  file_id Int
+
+  created_time DateTime @default(now())
+
+  @@id([shop_id, file_id])
+}
+
+//隐式多对多，会自动创建一个只有主键的表，创建直接关联创建即可，更新可以通过update + set来更新他们之间的关系表，
+model Company {
+  id Int @id @default(autoincrement())
+  name     String
+
+  users NewUser[]
+}
+
+model NewUser {
+  id       Int       @id @default(autoincrement())
+  name     String
+  companys Company[]
+}
+
+model NewShop {
+  id   Int    @id @default(autoincrement())
+  pre  String
+  name String
+
+  @@unique([pre, name]) //联合值唯一
+  //非自增类型，设置索引之后，查询效率会提高，插入、更新、删除效率会明显降低，毕竟使用的是排序树的B树，可以根据需要使用，非必要不适用
+  @@index([pre, name]) //索引
+}
+
+// //自引用关系(可以一个表使用多个自引用关系)
+// //子引用一对一（上下级），场景还是有一些的
+model Level {
+  id        Int     @id @default(autoincrement())
+  name      String?
+  //上一级
+  parent_id Int?    @unique
+  leader    Level?  @relation("UserGroupRelations", fields: [parent_id], references: [id])
+  //下一级(include)
+  next      Level?  @relation("UserGroupRelations")
+}
+
+//自引用一对多--（组长-组员），场景不多，一般设计基础信息的都会直接使用关系表，明确关系
+model LeaderAndMember {
+  id        Int               @id @default(autoincrement())
+  name      String?
+  leader_id Int?
+  leader    LeaderAndMember?  @relation("UserGroupRelations", fields: [leader_id], references: [id])
+  members   LeaderAndMember[] @relation("UserGroupRelations")
+}
+
+//自引用多对多--（互相关注），场景很少，实际一般不会这么用哈，一般一个多对多关系表就解决了，特殊场景使用
+model UserFollowUser {
+  id         Int              @id @default(autoincrement())
+  name       String?
+  followedBy UserFollowUser[] @relation("UserFollowRelation")
+  following  UserFollowUser[] @relation("UserFollowRelation")
+}
