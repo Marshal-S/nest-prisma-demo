@@ -11,6 +11,7 @@
     "combin": "prisma-import -f -s ./prisma/schemas/**/*.prisma -o ./prisma/schema.prisma && prisma generate",
     "migrate": "npx prisma migrate dev --name init",
     "db:push": "npx prisma db push",
+    "db:pushf": "prisma db push --accept-data-loss",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "dev": "nest start --watch",
